@@ -3,3 +3,6 @@ Designed and implemented a console-based Patient Triage RAG Application to analy
 
 
 GroqCloud API: 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
+
+
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
