@@ -32,6 +32,11 @@
 
 ---
 
+## Execution Screenshot:
+![image](https://github.com/user-attachments/assets/d7f55fb8-723e-49ae-b2a0-5a164a785822)
+ 
+---
+
 ## 📂 **Repository Structure**
 patient_triage_gen_ai/ </br>
 ├── app/                     # FastAPI application </br>
