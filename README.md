@@ -33,16 +33,16 @@
 ---
 
 ## 📂 **Repository Structure**
-patient_triage_gen_ai/
-├── app/                     # FastAPI application
-│   ├── main.py              # FastAPI server and endpoints
-│   ├── models.py            # Pydantic models for request/response
-│   ├── chromadb_utils.py    # ChromaDB utility functions
-│   └── groq_utils.py        # Groq API utility functions
-├── console_interfaces.py    # Console-based interface for user interaction
-├── requirements.txt         # Python dependencies
-├── .env.example             # Environment variables template
-└── README.md                # Project documentation
+patient_triage_gen_ai/ </br>
+├── app/                     # FastAPI application </br>
+│   ├── main.py              # FastAPI server and endpoints </br>
+│   ├── models.py            # Pydantic models for request/response </br>
+│   ├── chromadb_utils.py    # ChromaDB utility functions </br>
+│   └── groq_utils.py        # Groq API utility functions </br>
+├── console_interfaces.py    # Console-based interface for user interaction </br>
+├── requirements.txt         # Python dependencies </br>
+├── .env.example             # Environment variables template </br>
+└── README.md                # Project documentation </br>
 
 
 ## 🚀 Getting Started
