@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, Form, Request
-from groq import Groq
-from chromadb import Client, Documents, Embeddings
+from chromadb import Client
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 import chromadb
 from dotenv import load_dotenv
@@ -12,48 +11,48 @@ import json
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from groq import Groq
+import logging
 
 # Load environment variables
 load_dotenv()
+
+# Initialize Groq client
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
 # Initialize ChromaDB
-# add embeddings
-embed_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+embed_fn = SentenceTransformerEmbeddingFunction(model_name="all-mpnet-base-v2")
 chromadb_client = Client()
 collection = chromadb_client.create_collection(
     name="medical_guidelines",
     embedding_function=embed_fn
-    )
+)
 
 # Define FastAPI app and response models
 app = FastAPI()
 
-# ===== CORS Middleware =====
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ===== Initialized rate limiter =====
+# Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 
 class TriageStep(BaseModel):
     description: str
-    # details: Dict[str, str] | List[str] | str
-    # details: dict | list | str  # 3.10 version
-    details: Union[dict, list, str]  # 3.9 version
+    details: Union[dict, list, str]
     references: List[str] = []
 
 class TriageResponse(BaseModel):
     steps: List[TriageStep]
     final_output: Dict[str, str]
-    # final_output: dict  # 
     confidence: float
     guidelines_used: List[str]
 
@@ -62,49 +61,29 @@ def add_guidelines_to_chromadb():
     guidelines = [
         {
             "id": "1",
-            "text": "Patients with severe chest pain and radiating pain to the left arm may be experiencing a myocardial infarction (heart attack). Assign Level 1 (Resuscitation).",
+            "text": "Symptoms: Severe chest pain, radiating to the left arm, sweating, nausea. History: High blood pressure, family history of heart disease. Diagnosis: Suspected myocardial infarction (heart attack). Assign Level 1 (Resuscitation).",
             "metadata": {"condition": "myocardial infarction", "level": 1},
         },
         {
             "id": "2",
-            "text": "Patients experiencing severe difficulty breathing, blue lips, and unresponsiveness may be in respiratory arrest or have a severe asthma attack. Assign Level 1 (Resuscitation).",
+            "text": "Symptoms: Severe difficulty breathing, blue lips, unresponsiveness. History: None. Diagnosis: Severe asthma attack or respiratory arrest. Assign Level 1 (Resuscitation).",
             "metadata": {"condition": "severe asthma attack or respiratory arrest", "level": 1},
         },
         {
             "id": "3",
-            "text": "Patients with persistent chest pain radiating to the jaw, shortness of breath, and nausea may be experiencing a myocardial infarction (heart attack). Assign Level 1 (Resuscitation).",
-            "metadata": {"condition": "myocardial infarction", "level": 1},
-        },
-        {
-            "id": "4",
-            "text": "Patients with high fever, rash, neck stiffness, and recent travel to a meningitis outbreak region may have meningitis. Assign Level 1 (Resuscitation).",
-            "metadata": {"condition": "meningitis", "level": 1},
-        },
-        {
-            "id": "5",
-            "text": "Patients with mild abdominal pain, no fever, no vomiting, and the ability to eat may have gastritis. Assign Level 5 (Non-Urgent).",
+            "text": "Symptoms: Mild abdominal pain, no fever, no vomiting. History: None. Diagnosis: Gastritis. Assign Level 5 (Non-Urgent).",
             "metadata": {"condition": "gastritis", "level": 5},
         },
         {
-            "id": "6",   
-            "text": "Patients with a minor cut on the hand, no bleeding, and no signs of infection may have a superficial skin wound. Assign Level 5 (Non-Urgent).",
-            "metadata": {"condition": "superficial skin wound", "level": 5},
-        },
-        {
-            "id": "7",
-            "text": "Patients experiencing a sudden severe headache, difficulty speaking, and weakness on one side of the body may be having a stroke. Assign Level 1 (Resuscitation).",
+            "id": "4",
+            "text": "Symptoms: Sudden severe headache, difficulty speaking, weakness on one side of the body. History: None. Diagnosis: Suspected stroke. Assign Level 1 (Resuscitation).",
             "metadata": {"condition": "stroke", "level": 1},
         },
         {
-            "id": "8",
-            "text": "Patients with a sore throat, mild fever, swollen lymph nodes, and the ability to eat and drink may have viral pharyngitis. Assign Level 5 (Non-Urgent).",
-            "metadata": {"condition": "viral pharyngitis", "level": 5},
-        },
-        {
-            "id": "9",
-            "text": "Patients with sudden onset of severe abdominal pain, vomiting, and inability to pass stool, especially with a history of abdominal surgery, may have a bowel obstruction. Assign Level 2 (Emergency).",
+            "id": "5",
+            "text": "Symptoms: Sudden onset of severe abdominal pain, vomiting, inability to pass stool. History: History of abdominal surgery. Diagnosis: Suspected bowel obstruction. Assign Level 2 (Emergency).",
             "metadata": {"condition": "bowel obstruction", "level": 2},
-        },  
+        },
     ]
     for guideline in guidelines:
         collection.add(
@@ -128,14 +107,13 @@ def retrieve_context_from_chromadb(query):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Retrieval error: {str(e)}")
 
-
-# Modified function to generate structured triage report
+# Function to generate structured triage report using RAG
 def generate_structured_triage_report(symptoms: str, history: str, diagnosis: str) -> dict:
-    # Retrieve relevant context
+    # Step 1: Retrieve relevant guidelines from ChromaDB
     query = f"Symptoms: {symptoms}, History: {history}, Diagnosis: {diagnosis}"
     documents, metadatas, distances = retrieve_context_from_chromadb(query)
 
-    # Create structured prompt
+    # Step 2: Augment the prompt with retrieved guidelines
     system_prompt = """You are a medical triage expert. Analyze the patient report and generate a structured response following these steps:
 
     1. Analyze Symptoms/History/Diagnosis
@@ -185,9 +163,10 @@ def generate_structured_triage_report(symptoms: str, history: str, diagnosis: st
     RELEVANT GUIDELINES:
     {documents}"""
 
+    # Step 3: Generate the triage report using Groq (RAG)
     try:
         response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model="llama-3.2-90b-vision-preview",  # Use the appropriate Groq model
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
@@ -200,16 +179,21 @@ def generate_structured_triage_report(symptoms: str, history: str, diagnosis: st
 
         response_data = json.loads(response.choices[0].message.content)
 
-        # Calculate confidence score
-        if distances:
-            average_distance = sum(distances) / len(distances)
-            confidence_score = 1 - average_distance  # Assuming distances are normalized between 0 and 1
+        #  Step 4: Calculate confidence score based on retrieval distances
+        if distances and distances[0]:  # Check if distances is not empty and has valid data
+            flattened_distances = [d for sublist in distances for d in sublist]  # Flatten the list of lists
+            average_distance = sum(flattened_distances) / len(flattened_distances)  # Calculate average
+            confidence_score = 1 - average_distance  # Normalize to [0, 1]
         else:
             confidence_score = 0  # Default to 0 if no distances are available
 
-        # Add RAG metadata
+
+        # Step 5: Add RAG metadata to the response
         response_data["confidence"] = confidence_score
-        response_data["guidelines_used"] = [m["condition"] for m in metadatas]
+        # response_data["guidelines_used"] = [m["condition"] for m in metadatas]
+        flat_metadatas = [item for sublist in metadatas for item in sublist]
+        response_data["guidelines_used"] = [m["condition"] for m in flat_metadatas if isinstance(m, dict) and "condition" in m]
+
 
         return response_data
 
@@ -217,7 +201,6 @@ def generate_structured_triage_report(symptoms: str, history: str, diagnosis: st
         raise HTTPException(500, "Invalid JSON response from LLM")
     except Exception as e:
         raise HTTPException(500, f"Generation error: {str(e)}")
-
 
 @app.get("/")
 async def read_root():
