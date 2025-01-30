@@ -84,7 +84,6 @@ def add_guidelines_to_chromadb():
             "text": "Symptoms: Sudden onset of severe abdominal pain, vomiting, inability to pass stool. History: History of abdominal surgery. Diagnosis: Suspected bowel obstruction. Assign Level 2 (Emergency).",
             "metadata": {"condition": "bowel obstruction", "level": 2},
         },
-        # Add more guidelines for Levels 2-5
     ]
     for guideline in guidelines:
         collection.add(
