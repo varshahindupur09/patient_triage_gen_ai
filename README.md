@@ -13,3 +13,6 @@ graph LR
 
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
+Command to run:
+python3.12 console_interfaces.py 
+
