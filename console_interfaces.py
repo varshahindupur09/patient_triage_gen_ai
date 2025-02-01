@@ -1,3 +1,4 @@
+# console interface for the patient triage application
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
