@@ -32,9 +32,16 @@
 
 ---
 
-## Execution Screenshot:
+## Execution Screenshot: 
+### Console Interface
 ![image](https://github.com/user-attachments/assets/d7f55fb8-723e-49ae-b2a0-5a164a785822)
- 
+
+### React JS
+<img width="1438" alt="image" src="https://github.com/user-attachments/assets/b67c07d3-e366-41be-b8a4-d7745898fbe2" />
+<br />
+<br />
+<img width="1422" alt="image" src="https://github.com/user-attachments/assets/912cb7f2-80e0-4d88-9519-21bf635266ae" />
+
 ---
 
 ## 📂 **Repository Structure**
@@ -91,6 +98,12 @@ uvicorn app.main:app --reload
 - Use the console interface:
 ```
 python console_interfaces.py
+```
+- To use React UI
+```
+cd ui
+npm install
+npm start
 ```
 
 ## 🖥️ Usage
