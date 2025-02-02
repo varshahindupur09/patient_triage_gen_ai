@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <div className="home-container">
       <div className="home-header">
-        <h1>Welcome to Patient Triage Dignostic System</h1>
+        <h3>Welcome to Patient Triage Dignostic System</h3>
       </div>
       <div className="home-content">
         {/* <h2>Home</h2> */}
