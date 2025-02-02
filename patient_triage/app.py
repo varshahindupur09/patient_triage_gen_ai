@@ -15,6 +15,8 @@ from slowapi.util import get_remote_address
 from groq import Groq
 import logging
 
+logging.basicConfig(level=logging.DEBUG)
+
 # Load environment variables
 load_dotenv()
 
@@ -36,7 +38,7 @@ app = FastAPI()
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000","http://192.168.1.143:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,6 +58,11 @@ class TriageResponse(BaseModel):
     final_output: Dict[str, str]
     confidence: float
     guidelines_used: List[str]
+
+class TriageRequest(BaseModel):
+    symptoms: str
+    history: str
+    diagnosis: str
 
 # Function to add documents to ChromaDB
 def add_guidelines_to_chromadb():
@@ -195,6 +202,8 @@ def generate_structured_triage_report(symptoms: str, history: str, diagnosis: st
         flat_metadatas = [item for sublist in metadatas for item in sublist]
         response_data["guidelines_used"] = [m["condition"] for m in flat_metadatas if isinstance(m, dict) and "condition" in m]
 
+        # Logging the response data for debugging
+        logging.debug(f"Response Data: {response_data}")
 
         return response_data
 
@@ -211,18 +220,24 @@ async def read_root():
 @limiter.limit("10/minute")
 async def assign_triage_level(
     request: Request,
-    symptoms: str = Form(...),
-    history: str = Form(...),
-    diagnosis: str = Form(...)
+    # symptoms: str = Form(...),
+    # history: str = Form(...),
+    # diagnosis: str = Form(...)
+    triage_request: TriageRequest
 ):
     try:
-        report = generate_structured_triage_report(symptoms, history, diagnosis)
-        return report
+        report = generate_structured_triage_report(
+            triage_request.symptoms, 
+            triage_request.history, 
+            triage_request.diagnosis
+        )
+        # return report
+        return TriageResponse(**report)
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-add_guidelines_to_chromadb()
-uvicorn.run(app, host="0.0.0.0", port=8001)
+if __name__ == "__main__":
+    add_guidelines_to_chromadb()
+    uvicorn.run(app, host="0.0.0.0", port=8001)
